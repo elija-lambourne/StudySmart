@@ -7,4 +7,6 @@ public sealed class User
     public Guid RootDirId { get; set; }
     public ICollection<Folder> Folders { get; set; }
     public ICollection<Deadline> Deadlines { get; set; }
+    public string Email { get; set; }
+    public string Password { get; set; }
 }

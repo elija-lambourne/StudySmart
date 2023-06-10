@@ -1,4 +1,7 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using StudySmortAPI;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +20,19 @@ builder.Services.AddCors(c =>
         options.AllowAnyMethod();
     });
 });
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = "htl-leonding", //! Basic issuer because idfc about security
+            ValidAudience = "htl-leonding-aud", //! Basic Aud because (again) idfc about security
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("your-secret-key"))
+        };
+    });
 
 var app = builder.Build();
 
@@ -39,5 +55,6 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-
+app.UseAuthentication();
+app.UseAuthorization();
 app.Run();
