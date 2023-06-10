@@ -29,6 +29,8 @@ public class FlashcardController : ControllerBase
         {
             return Unauthorized("User has been deleted but JWT is still valid");
         }
+        
+        _dbContext.
 
     }
 

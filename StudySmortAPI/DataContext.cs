@@ -11,6 +11,7 @@ public class DataContext : DbContext
     public DbSet<Folder> Folders { get; set; }
     public DbSet<Notebook> Notebooks { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<FlashcardCategory> FlashcardCategories { get; set; }
 
     public DataContext()
     {
@@ -98,6 +99,10 @@ public class DataContext : DbContext
             entity.HasOne(c => c.Owner)
                 .WithMany(u => u.FlashcardCategories)
                 .HasForeignKey(c => c.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(x => x.Flashcards)
+                .WithOne(x => x.Category)
+                .HasForeignKey(x => x.CategoryId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Additional configurations for FlashcardCategory entity...
