@@ -64,6 +64,8 @@ public class DataContext : DbContext
             .WithOne()
             .HasForeignKey(n => n.OwnerId)
             .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Notebook>()
+            .HasKey(f => f.Id);
 
         // Add any additional entity configurations or relationships here
 
