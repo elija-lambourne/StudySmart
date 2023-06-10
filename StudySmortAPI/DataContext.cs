@@ -18,7 +18,7 @@ public class DataContext : DbContext
         var databaseName = Path.Combine(rootDir, "Data/db.sqlite3");
         _dbPath = databaseName;
     }
-    
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -26,48 +26,95 @@ public class DataContext : DbContext
             optionsBuilder.UseSqlite($"Data Source={_dbPath}");
         }
     }
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<User>()
-            .HasMany(u => u.Flashcards)
-            .WithOne(f => f.Owner)
-            .HasForeignKey(f => f.OwnerId)
-            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(u => u.Id);
 
-        modelBuilder.Entity<User>()
-            .HasMany(u => u.Folders)
-            .WithOne(f => f.Owner)
-            .HasForeignKey(f => f.OwnerId)
-            .OnDelete(DeleteBehavior.Cascade);
+            // Define relationships
+            entity.HasMany(u => u.FlashcardCategories)
+                .WithOne(c => c.Owner)
+                .HasForeignKey(c => c.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<User>()
-            .HasMany(u => u.Deadlines)
-            .WithOne(d => d.Owner)
-            .HasForeignKey(d => d.OwnerId)
-            .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(u => u.Deadlines)
+                .WithOne(d => d.Owner)
+                .HasForeignKey(d => d.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Notebook>()
-            .HasOne(n => n.Owner)
-            .WithMany()
-            .HasForeignKey(n => n.OwnerId)
-            .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(u => u.Folders)
+                .WithOne(f => f.Owner)
+                .HasForeignKey(f => f.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Folder>()
-            .HasMany(f => f.ChildFolders)
-            .WithOne()
-            .HasForeignKey(f => f.FolderId)
-            .OnDelete(DeleteBehavior.Restrict);
+            // Additional configurations for User entity...
+            entity.Property(u => u.Email).IsRequired();
+            entity.Property(u => u.Password).IsRequired();
+        });
 
-        modelBuilder.Entity<Folder>()
-            .HasMany(f => f.ChildNotebooks)
-            .WithOne()
-            .HasForeignKey(n => n.OwnerId)
-            .OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<Notebook>()
-            .HasKey(f => f.Id);
+        modelBuilder.Entity<Notebook>(entity =>
+        {
+            entity.HasKey(n => n.Id);
 
-        // Add any additional entity configurations or relationships here
+            // Define relationships
+            entity.HasOne(n => n.Owner)
+                .WithMany()
+                .HasForeignKey(n => n.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Additional configurations for Notebook entity...
+        });
+
+        modelBuilder.Entity<Folder>(entity =>
+        {
+            entity.HasKey(f => f.FolderId);
+
+            // Define relationships
+            entity.HasOne(f => f.Owner)
+                .WithMany(u => u.Folders)
+                .HasForeignKey(f => f.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(f => f.ChildNotebooks)
+                .WithOne()
+                .HasForeignKey(n => n.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(f => f.ChildFolders)
+                .WithOne(cf => cf.ParentFolder)
+                .HasForeignKey(cf => cf.ParentFolderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Additional configurations for Folder entity...
+        });
+
+        modelBuilder.Entity<FlashcardCategory>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+
+            // Define relationships
+            entity.HasOne(c => c.Owner)
+                .WithMany(u => u.FlashcardCategories)
+                .HasForeignKey(c => c.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Additional configurations for FlashcardCategory entity...
+        });
+
+        modelBuilder.Entity<Deadline>(entity =>
+        {
+            entity.HasKey(d => d.DeadlineId);
+
+            // Define relationships
+            entity.HasOne(d => d.Owner)
+                .WithMany(u => u.Deadlines)
+                .HasForeignKey(d => d.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Additional configurations for Deadline entity...
+        });
 
         base.OnModelCreating(modelBuilder);
     }

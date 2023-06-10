@@ -58,10 +58,9 @@ public class AccountController : ControllerBase
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            // Add any additional claims as needed
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("your-secret-key"));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(RandomKeyGenerator.Generate256BitKeyString()));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
@@ -74,6 +73,6 @@ public class AccountController : ControllerBase
 
         var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
-        return Ok(new { token = tokenString });
+        return Ok(new UserData(user.Id,tokenString));
     }
 }

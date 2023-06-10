@@ -14,6 +14,24 @@ public class FlashcardController : ControllerBase
         _dbContext = dbContext;
     }
 
+    [HttpPost("category")]
+    [Authorize]
+    public IActionResult CreateCategory([FromBody] FlashcardCategoryData categoryData)
+    {
+        var userId = GetUserIdFromContext();
+        if (userId == null)
+        {
+            return BadRequest();
+        }
+
+        var user = _dbContext.Users.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+        {
+            return Unauthorized("User has been deleted but JWT is still valid");
+        }
+
+    }
+
     [HttpGet]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
