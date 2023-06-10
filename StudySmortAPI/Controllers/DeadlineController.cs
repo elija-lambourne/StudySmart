@@ -10,7 +10,7 @@ public class DeadlineController : ControllerBase
 {
     private readonly DataContext _dbContext;
 
-    public DeadlineController(DataContext dbContext, IHttpContextAccessor httpContextAccessor)
+    public DeadlineController(DataContext dbContext)
     {
         _dbContext = dbContext;
     }

@@ -9,7 +9,7 @@ public class FlashcardController : ControllerBase
 {
     private readonly DataContext _dbContext;
 
-    public FlashcardController(DataContext dbContext, IHttpContextAccessor httpContextAccessor)
+    public FlashcardController(DataContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -42,7 +42,7 @@ public class FlashcardController : ControllerBase
     [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public IActionResult CreateDeadline([FromBody] Flashcard flashcard)
+    public IActionResult Create([FromBody] Flashcard flashcard)
     {
         if (flashcard == null)
         {
