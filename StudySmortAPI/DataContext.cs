@@ -105,6 +105,7 @@ public class DataContext : DbContext
                 .HasForeignKey(x => x.CategoryId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+
             // Additional configurations for FlashcardCategory entity...
         });
 
@@ -121,6 +122,13 @@ public class DataContext : DbContext
             // Additional configurations for Deadline entity...
         });
 
+        modelBuilder.Entity<Flashcard>()
+            .HasOne(f => f.Category)
+            .WithMany(c => c.Flashcards)
+            .HasForeignKey(f => f.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        
         base.OnModelCreating(modelBuilder);
     }
 }

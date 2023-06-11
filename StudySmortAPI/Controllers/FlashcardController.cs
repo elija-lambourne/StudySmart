@@ -1,6 +1,7 @@
+using System.ComponentModel;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using StudySmortAPI.Model;
 
 namespace StudySmortAPI.Controllers;
@@ -14,8 +15,15 @@ public class FlashcardController : ControllerBase
         _dbContext = dbContext;
     }
 
+    [HttpPost]
+    public IActionResult DeleteCategory()
+    {
+        
+    }
+    
     [HttpPost("category")]
     [Authorize]
+    [Description("Creates a new flashcard category based on the passed json data")]
     public IActionResult CreateCategory([FromBody] FlashcardCategoryData categoryData)
     {
         var userId = GetUserIdFromContext();
@@ -29,18 +37,29 @@ public class FlashcardController : ControllerBase
         {
             return Unauthorized("User has been deleted but JWT is still valid");
         }
-        
-        _dbContext.
 
+        var id = Guid.NewGuid();
+        _dbContext.FlashcardCategories.Add(new FlashcardCategory()
+        {
+            Flashcards = new List<Flashcard>(),
+            Id = id,
+            Name = categoryData.Name,
+            Owner = user,
+            OwnerId = user.Id
+        });
+        _dbContext.SaveChanges();
+
+        categoryData.Id = id;
+        return Ok(categoryData);
     }
 
-    [HttpGet]
+    [HttpGet("{id}")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IActionResult Get()
+    [Description("Gets all the flashcards which belong to the specified category (passed id)")]
+    public IActionResult GetByCategory(string id)
     {
         var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
         if (userId == null)
@@ -48,25 +67,59 @@ public class FlashcardController : ControllerBase
             return BadRequest("User ID not found");
         }
         
-        var deadlines = _dbContext.Flashcards.Where(f => f.OwnerId == new Guid(userId)).ToList();
-        if (deadlines.Count == 0)
+        var flashcards = _dbContext.Flashcards.Where(f => f.OwnerId == new Guid(userId) && f.CategoryId.ToString() == id).ToList();
+        if (flashcards.Count == 0)
         {
             return NoContent();
         }
+
+        var flashcardData = new List<FlashCardData>();
+        foreach (var flashcard in flashcards)
+        {
+            flashcardData.Add(new FlashCardData(flashcard.Id,flashcard.Word,flashcard.Translation,flashcard.CorrectCnt,
+                flashcard.WrongCnt,flashcard.SkipCnt,flashcard.CategoryId,flashcard.Category.Name));
+        }
         
-        return Ok(deadlines);
-    }
+        return Ok(flashcardData);
+    }   
     
-      
-    [HttpPost]
+    [HttpGet]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public IActionResult Create([FromBody] Flashcard flashcard)
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [Description("Gets the category data (name + id) of all the categories")]
+    public IActionResult GetCategories(string id)
     {
-        if (flashcard == null)
+        var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        if (userId == null)
         {
-            return BadRequest("Invalid flashcard data");
+            return BadRequest("User ID not found");
+        }
+        
+        var flashcardCategories = _dbContext.FlashcardCategories.Where(f => f.OwnerId.ToString() == userId).ToList();
+        if (flashcardCategories.Count == 0)
+        {
+            return NoContent();
+        }
+
+        var actualColl = flashcardCategories.Select(flashcardCategory => new FlashcardCategoryData(flashcardCategory.Id, flashcardCategory.Name)).ToList();
+
+        return Ok(actualColl);
+    }
+    
+      
+    [HttpPost("{id}")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [Description("Adds the passed flashcard (in the body) to the specified category (hence id)")]
+    public IActionResult Post(string id,[FromBody] FlashCardData flashcard)
+    {
+        var category = _dbContext.FlashcardCategories.FirstOrDefault(x => x.Id.ToString() == id);
+        if (flashcard == null || category == null)
+        {
+            return BadRequest();
         }
 
         var userId = GetUserIdFromContext();
@@ -74,14 +127,31 @@ public class FlashcardController : ControllerBase
         {
             return BadRequest("User ID not found");
         }
-        flashcard.OwnerId = (Guid)userId;
+        var user = _dbContext.Users.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+        {
+            return Unauthorized("User has been deleted but JWT is still valid");
+        }
 
-        flashcard.Id = Guid.NewGuid();
-
-        _dbContext.Flashcards.Add(flashcard);
+        var flashcardId = Guid.NewGuid();
+        var flashcard2 = new Flashcard()
+        {
+            Category = category,
+            CategoryId = category.Id,
+            CorrectCnt = flashcard.CorrectCnt,
+            Id = flashcardId,
+            Owner = user,
+            OwnerId = user.Id,
+            SkipCnt = flashcard.SkipCnt,
+            Translation = flashcard.Translation,
+            Word = flashcard.Word,
+            WrongCnt = flashcard.WrongCnt
+        };
+        _dbContext.Flashcards.Add(flashcard2);
+        _dbContext.FlashcardCategories.FirstOrDefault(x => x.Id.ToString() == id)!.Flashcards.Add(flashcard2);
         _dbContext.SaveChanges();
-
-        return Ok(flashcard);
+        
+        return Ok(flashcard with { Id = flashcardId, CategoryId = category.Id, CategoryName = category.Name });
     }
 
     private Guid? GetUserIdFromContext()

@@ -13,31 +13,50 @@ public class FolderController : ControllerBase
         _dbContext = dbContext;
     }
     
-    [HttpPost("{parentId}/ChildFolder")]
+    [HttpPost("Folder/{parentId}")]
     [Authorize]
-    public IActionResult AddChildFolder(Guid parentId, [FromBody] Folder childFolder)
+    public IActionResult AddChildFolder(Guid parentId, [FromBody] FolderData childFolder)
     {
         if (childFolder == null)
         {
             return BadRequest("Invalid folder data");
         }
+        var userId = GetUserIdFromContext();
+        if (userId == null)
+        {
+            return BadRequest();
+        }
 
+        var user = _dbContext.Users.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+        {
+            return Unauthorized("User has been deleted but JWT is still valid");
+        }
         var parentFolder = _dbContext.Folders.FirstOrDefault(f => f.FolderId == parentId);
         if (parentFolder == null)
         {
             return NotFound("Parent folder not found");
         }
-
-        childFolder.FolderId = Guid.NewGuid();
-        parentFolder.ChildFolders.Add(childFolder);
+        
+        _dbContext.Folders.FirstOrDefault(f => f.FolderId == parentId)!.ChildFolders.Add(new Folder()
+        {
+            ChildFolders = new List<Folder>(),
+            ChildNotebooks = new List<Notebook>(),
+            FolderId = Guid.NewGuid(),
+            FolderName = childFolder.Name,
+            Owner = user,
+            OwnerId = (Guid)userId,
+            ParentFolder = parentFolder,
+            ParentFolderId = parentFolder.FolderId
+        });
         _dbContext.SaveChanges();
 
-        return Ok(childFolder);
+        return Ok();
     }
 
-    [HttpPost("{parentId}/Notebook")]
+    [HttpPost("Notebook/{parentId}")]
     [Authorize]
-    public IActionResult AddNotebookToFolder(Guid parentId, [FromBody] Notebook notebook)
+    public IActionResult AddNotebookToFolder(Guid parentId, [FromBody] NotebookData notebook)
     {
         if (notebook == null)
         {
@@ -55,14 +74,25 @@ public class FolderController : ControllerBase
         {
             return BadRequest("Invalid user id");
         }
-        notebook.OwnerId = (Guid)userId;
-        parentFolder.ChildNotebooks.Add(notebook);
+        var user = _dbContext.Users.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+        {
+            return Unauthorized("User has been deleted but JWT is still valid");
+        }
+        
+        parentFolder.ChildNotebooks.Add(new Notebook()
+        {
+            Id = Guid.NewGuid(),
+            Owner = user,
+            OwnerId = (Guid)userId,
+            Pages = notebook.Pages.ToList()
+        });
         _dbContext.SaveChanges();
 
         return Ok(notebook);
     }
     
-    [HttpPut("{notebookId}/Pages")]
+    [HttpPut("Notebook/Pages/{notebookId}")]
     [Authorize]
     public IActionResult UpdateNotebookPages(Guid notebookId, [FromBody] ICollection<string> newPages)
     {

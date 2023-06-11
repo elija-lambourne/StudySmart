@@ -99,7 +99,7 @@ namespace StudySmortAPI.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("FlashcardCategory");
+                    b.ToTable("FlashcardCategories");
                 });
 
             modelBuilder.Entity("StudySmortAPI.Model.Folder", b =>
@@ -182,7 +182,7 @@ namespace StudySmortAPI.Migrations
                     b.HasOne("StudySmortAPI.Model.FlashcardCategory", "Category")
                         .WithMany("Flashcards")
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("StudySmortAPI.Model.User", "Owner")
