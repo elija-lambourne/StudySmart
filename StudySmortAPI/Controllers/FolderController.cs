@@ -13,14 +13,17 @@ public class FolderController : ControllerBase
 {
     private readonly DataContext _dbContext;
 
-    public FolderController(DataContext dbContext)
+    private readonly ILogger<FolderController> _logger;
+    public FolderController(DataContext dbContext,ILogger<FolderController> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
     
     [HttpPost("{parentId:guid}")]
     public IActionResult AddChildFolder(Guid parentId, [FromBody] FolderData childFolder)
     {
+        _logger.LogInformation("POST Folder/{{parentId:guid}}");
         if (childFolder == null)
         {
             return BadRequest("Invalid folder data");

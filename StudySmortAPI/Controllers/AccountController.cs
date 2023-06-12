@@ -12,17 +12,19 @@ namespace StudySmortAPI.Controllers;
 public class AccountController : ControllerBase
 {
     private readonly DataContext _dbContext;
-
-    public AccountController(DataContext dbContext)
+    private readonly ILogger<AccountController> _logger;
+    public AccountController(DataContext dbContext, ILogger<AccountController> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult Register(UserRegistrationModel model)
-    {
+    {        
+        _logger.LogInformation("POST Account/register");
         if (_dbContext.Users.Any(u => u.Email == model.Email))
         {
             return BadRequest("User already exists.");
