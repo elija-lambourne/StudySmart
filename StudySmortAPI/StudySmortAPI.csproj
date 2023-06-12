@@ -16,7 +16,7 @@
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0-preview.4.23259.3" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.31.0" />
     </ItemGroup>
 
@@ -24,6 +24,19 @@
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="dist\dist\web.config" />
+      <_ContentIncludedByDefault Remove="dist\web.config" />
+      <_ContentIncludedByDefault Remove="dist\appsettings.Development.json" />
+      <_ContentIncludedByDefault Remove="dist\appsettings.json" />
+      <_ContentIncludedByDefault Remove="dist\dist\appsettings.Development.json" />
+      <_ContentIncludedByDefault Remove="dist\dist\appsettings.json" />
+      <_ContentIncludedByDefault Remove="dist\dist\StudySmortAPI.deps.json" />
+      <_ContentIncludedByDefault Remove="dist\dist\StudySmortAPI.runtimeconfig.json" />
+      <_ContentIncludedByDefault Remove="dist\StudySmortAPI.deps.json" />
+      <_ContentIncludedByDefault Remove="dist\StudySmortAPI.runtimeconfig.json" />
     </ItemGroup>
 
 </Project>

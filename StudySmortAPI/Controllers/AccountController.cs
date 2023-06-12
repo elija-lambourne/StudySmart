@@ -38,8 +38,24 @@ public class AccountController : ControllerBase
 
         _dbContext.Users.Add(newUser);
         _dbContext.SaveChanges();
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(RandomKeyGenerator.Generate256BitKeyString()));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        return Ok("Registration successful.");
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, newUser.Id.ToString()),
+        };
+        var token = new JwtSecurityToken(
+            issuer: "htl-leonding",
+            audience: "htl-leonding-aud",
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1), // Token expiration time
+            signingCredentials: credentials
+        );
+
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        return Ok(new UserData(newUser.Id,tokenString));
     }
     
     [HttpPost("login")]

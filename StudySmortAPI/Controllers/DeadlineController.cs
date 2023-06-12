@@ -6,6 +6,7 @@ namespace StudySmortAPI.Controllers;
 
 [ApiController]
 [Route("[controller]")]
+[Authorize]
 public class DeadlineController : ControllerBase
 {
     private readonly DataContext _dbContext;
@@ -16,7 +17,6 @@ public class DeadlineController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -40,7 +40,6 @@ public class DeadlineController : ControllerBase
     }
     
     [HttpPost]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult CreateDeadline([FromBody] DeadlineData deadline)
@@ -71,7 +70,6 @@ public class DeadlineController : ControllerBase
     }
     
     [HttpDelete("{id}")]
-    [Authorize]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult Delete(string id)

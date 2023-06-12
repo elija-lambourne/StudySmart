@@ -7,4 +7,9 @@ public class FlashcardCategory
     public ICollection<Flashcard> Flashcards { get; set; }
     public User Owner { get; set; }
     public Guid OwnerId { get; set; }
+
+    public void Update(string name)
+    {
+        Name = name;
+    }
 }

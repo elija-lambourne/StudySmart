@@ -1,9 +1,14 @@
+using System.Collections;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using StudySmortAPI.Model;
 
 namespace StudySmortAPI.Controllers;
 
+[ApiController]
+[Route("[controller]")]
+[Authorize]
 public class FolderController : ControllerBase
 {
     private readonly DataContext _dbContext;
@@ -13,8 +18,7 @@ public class FolderController : ControllerBase
         _dbContext = dbContext;
     }
     
-    [HttpPost("Folder/{parentId}")]
-    [Authorize]
+    [HttpPost("{parentId:guid}")]
     public IActionResult AddChildFolder(Guid parentId, [FromBody] FolderData childFolder)
     {
         if (childFolder == null)
@@ -37,8 +41,8 @@ public class FolderController : ControllerBase
         {
             return NotFound("Parent folder not found");
         }
-        
-        _dbContext.Folders.FirstOrDefault(f => f.FolderId == parentId)!.ChildFolders.Add(new Folder()
+
+        var folder = new Folder()
         {
             ChildFolders = new List<Folder>(),
             ChildNotebooks = new List<Notebook>(),
@@ -48,14 +52,14 @@ public class FolderController : ControllerBase
             OwnerId = (Guid)userId,
             ParentFolder = parentFolder,
             ParentFolderId = parentFolder.FolderId
-        });
+        };
+        _dbContext.Folders.FirstOrDefault(f => f.FolderId == parentId)!.ChildFolders.Add(folder);
         _dbContext.SaveChanges();
 
         return Ok();
     }
 
-    [HttpPost("Notebook/{parentId}")]
-    [Authorize]
+    [HttpPost("Notebook/{parentId:guid}")]
     public IActionResult AddNotebookToFolder(Guid parentId, [FromBody] NotebookData notebook)
     {
         if (notebook == null)
@@ -63,17 +67,17 @@ public class FolderController : ControllerBase
             return BadRequest("Invalid notebook data");
         }
 
-        var parentFolder = _dbContext.Folders.FirstOrDefault(f => f.FolderId == parentId);
-        if (parentFolder == null)
-        {
-            return NotFound("Parent folder not found");
-        }
-
         var userId = GetUserIdFromContext();
         if (userId == null)
         {
             return BadRequest("Invalid user id");
         }
+        var parentFolder = _dbContext.Folders.FirstOrDefault(f => f.FolderId == parentId && f.OwnerId == userId);
+        if (parentFolder == null)
+        {
+            return NotFound("Parent folder not found");
+        }
+        
         var user = _dbContext.Users.FirstOrDefault(u => u.Id == userId);
         if (user == null)
         {
@@ -92,8 +96,7 @@ public class FolderController : ControllerBase
         return Ok(notebook);
     }
     
-    [HttpPut("Notebook/Pages/{notebookId}")]
-    [Authorize]
+    [HttpPut("Notebook/Pages/{notebookId:guid}")]
     public IActionResult UpdateNotebookPages(Guid notebookId, [FromBody] ICollection<string> newPages)
     {
         var notebook = _dbContext.Notebooks.FirstOrDefault(n => n.Id == notebookId);
@@ -106,6 +109,67 @@ public class FolderController : ControllerBase
         _dbContext.SaveChanges();
 
         return Ok(notebook);
+    }
+
+    [HttpPut]
+    public IActionResult UpdateFolder([FromBody] FolderData data)
+    {
+        var userId = GetUserIdFromContext();
+        if (userId == null)
+        {
+            return BadRequest("Invalid user id");
+        }
+
+        var firstOrDefault = _dbContext.Folders.FirstOrDefault(x => x.FolderId == data.Id && x.OwnerId == userId);
+        if (firstOrDefault == null)
+        {
+            return NotFound();
+        }
+        
+        firstOrDefault.Update(data);
+        _dbContext.SaveChanges();
+        return Ok();
+    }
+
+    [HttpDelete("{id:guid}")]
+    public IActionResult DeleteFolder(Guid id)
+    {
+        var userId = GetUserIdFromContext();
+        if (userId == null)
+        {
+            return BadRequest("Invalid user id");
+        }
+
+        var ent = _dbContext.Folders.FirstOrDefault(x => x.FolderId == id && x.OwnerId == userId);
+        if (ent == null)
+        {
+            return NotFound();
+        }
+
+        _dbContext.Folders.Remove(ent);
+        _dbContext.SaveChanges();
+
+        return Ok();
+    }
+
+    [HttpDelete("notebook/{id:guid}")]
+    public IActionResult DeleteNotebook(Guid id)
+    {
+        var userId = GetUserIdFromContext();
+        if (userId == null)
+        {
+            return BadRequest("Invalid user id");
+        }
+
+        var ent = _dbContext.Notebooks.FirstOrDefault(x => x.Id == id && x.OwnerId == userId);
+        if (ent == null)
+        {
+            return NotFound();
+        }
+
+        _dbContext.Notebooks.Remove(ent);
+        _dbContext.SaveChanges();
+        return Ok();
     }
     private Guid? GetUserIdFromContext()
     {

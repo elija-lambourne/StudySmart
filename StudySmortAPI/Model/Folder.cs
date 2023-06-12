@@ -10,4 +10,9 @@ public sealed class Folder
     public ICollection<Notebook> ChildNotebooks { get; set; }
     public Folder ParentFolder { get; set; }
     public Guid ParentFolderId { get; set; }
+
+    public void Update(FolderData data)
+    {
+        FolderName = data.Name;
+    }
 }

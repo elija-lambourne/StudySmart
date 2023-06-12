@@ -12,4 +12,13 @@ public sealed class Flashcard
     public int CorrectCnt { get; set; }
     public int WrongCnt { get; set; }
     public int SkipCnt { get; set; }
+
+    public void UpdateData(FlashCardData data)
+    {
+        Word = data.Word;
+        Translation = data.Translation;
+        CorrectCnt = data.CorrectCnt;
+        WrongCnt = data.WrongCnt;
+        SkipCnt = data.SkipCnt;
+    }
 }
