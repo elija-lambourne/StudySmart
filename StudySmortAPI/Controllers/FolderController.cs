@@ -114,8 +114,8 @@ public class FolderController : ControllerBase
         return Ok(notebook);
     }
 
-    [HttpPut]
-    public IActionResult UpdateFolder([FromBody] FolderData data)
+    [HttpPut("{name}+{id:guid}")]
+    public IActionResult RenameFolder(string name,Guid id)
     {
         var userId = GetUserIdFromContext();
         if (userId == null)
@@ -123,13 +123,13 @@ public class FolderController : ControllerBase
             return BadRequest("Invalid user id");
         }
 
-        var firstOrDefault = _dbContext.Folders.FirstOrDefault(x => x.FolderId == data.Id && x.OwnerId == userId);
+        var firstOrDefault = _dbContext.Folders.FirstOrDefault(x => x.FolderId == id && x.OwnerId == userId);
         if (firstOrDefault == null)
         {
             return NotFound();
         }
         
-        firstOrDefault.Update(data);
+        firstOrDefault.Update(name);
         _dbContext.SaveChanges();
         return Ok();
     }
@@ -176,7 +176,7 @@ public class FolderController : ControllerBase
     }
     
     
-  /*  [HttpGet("info")]
+    [HttpGet]
     public IActionResult GetAllFolders()
     {
         var userId = GetUserIdFromContext();
@@ -184,9 +184,15 @@ public class FolderController : ControllerBase
         {
             return BadRequest("Invalid user id");
         }
-        
-        
-    }*/
+
+        var root = _dbContext.Users.FirstOrDefault(x => x.Id == userId)?.RootDir;
+        if (root == null)
+        {
+            return BadRequest("User delete, but JWT still valid");
+        }
+
+        return Ok(ConvertFolderToFolderData(root));
+    }
     private Guid? GetUserIdFromContext()
     {
         var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
@@ -197,4 +203,37 @@ public class FolderController : ControllerBase
         
         return new Guid(userId);
     }
+    
+    private static FolderData ConvertFolderToFolderData(Folder folder)
+    {
+        // Recursively convert child folders
+        var childFolders = folder.ChildFolders?.Select(ConvertFolderToFolderData)?.ToList();
+
+        // Convert child notebooks to a desired format (assuming you have a similar conversion method)
+        var childNotebooks = folder.ChildNotebooks?.Select(ConvertNotebookToNotebookData)?.ToList();
+
+        // Create the FolderData object using the provided properties
+        var folderData = new FolderData(
+            folder.FolderId,
+            folder.FolderName,
+            folder.ParentFolderId,
+            folder.ParentFolder?.FolderName ?? "-",
+            childFolders ?? new List<FolderData>(),
+            childNotebooks ?? new List<NotebookData>()
+        );
+
+        return folderData;
+    }
+
+    private static NotebookData ConvertNotebookToNotebookData(Notebook notebook)
+    {
+        var notebookData = new NotebookData(
+            notebook.Id,
+            notebook.Pages,
+            notebook.OwnerId
+        );
+
+        return notebookData;
+    }
+
 }

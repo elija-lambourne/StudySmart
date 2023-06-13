@@ -120,7 +120,8 @@ namespace StudySmortAPI.Migrations
 
                     b.HasKey("FolderId");
 
-                    b.HasIndex("OwnerId");
+                    b.HasIndex("OwnerId")
+                        .IsUnique();
 
                     b.HasIndex("ParentFolderId");
 
@@ -155,6 +156,9 @@ namespace StudySmortAPI.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FolderId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Password")
@@ -210,8 +214,8 @@ namespace StudySmortAPI.Migrations
             modelBuilder.Entity("StudySmortAPI.Model.Folder", b =>
                 {
                     b.HasOne("StudySmortAPI.Model.User", "Owner")
-                        .WithMany("Folders")
-                        .HasForeignKey("OwnerId")
+                        .WithOne("RootDir")
+                        .HasForeignKey("StudySmortAPI.Model.Folder", "OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -261,7 +265,8 @@ namespace StudySmortAPI.Migrations
 
                     b.Navigation("FlashcardCategories");
 
-                    b.Navigation("Folders");
+                    b.Navigation("RootDir")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

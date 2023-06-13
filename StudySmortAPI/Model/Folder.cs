@@ -11,8 +11,8 @@ public sealed class Folder
     public Folder ParentFolder { get; set; }
     public Guid ParentFolderId { get; set; }
 
-    public void Update(FolderData data)
+    public void Update(string name)
     {
-        FolderName = data.Name;
+        FolderName = name;
     }
 }
