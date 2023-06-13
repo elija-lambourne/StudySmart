@@ -45,11 +45,11 @@ public class DataContext : DbContext
                 .HasForeignKey(d => d.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasMany(u => u.Folders)
+            entity.HasOne(u => u.RootDir)
                 .WithOne(f => f.Owner)
-                .HasForeignKey(f => f.OwnerId)
+                .HasForeignKey<User>(x => x.FolderId)
                 .OnDelete(DeleteBehavior.Cascade);
-
+            
             // Additional configurations for User entity...
             entity.Property(u => u.Email).IsRequired();
             entity.Property(u => u.Password).IsRequired();
@@ -71,13 +71,11 @@ public class DataContext : DbContext
         modelBuilder.Entity<Folder>(entity =>
         {
             entity.HasKey(f => f.FolderId);
-
             // Define relationships
             entity.HasOne(f => f.Owner)
-                .WithMany(u => u.Folders)
-                .HasForeignKey(f => f.OwnerId)
+                .WithOne(u => u.RootDir)
+                .HasForeignKey<Folder>(x => x.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
-
             entity.HasMany(f => f.ChildNotebooks)
                 .WithOne()
                 .HasForeignKey(n => n.OwnerId)
