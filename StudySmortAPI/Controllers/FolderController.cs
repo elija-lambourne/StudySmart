@@ -174,6 +174,19 @@ public class FolderController : ControllerBase
         _dbContext.SaveChanges();
         return Ok();
     }
+    
+    
+  /*  [HttpGet("info")]
+    public IActionResult GetAllFolders()
+    {
+        var userId = GetUserIdFromContext();
+        if (userId == null)
+        {
+            return BadRequest("Invalid user id");
+        }
+        
+        
+    }*/
     private Guid? GetUserIdFromContext()
     {
         var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
