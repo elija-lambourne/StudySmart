@@ -120,9 +120,6 @@ namespace StudySmortAPI.Migrations
 
                     b.HasKey("FolderId");
 
-                    b.HasIndex("OwnerId")
-                        .IsUnique();
-
                     b.HasIndex("ParentFolderId");
 
                     b.ToTable("Folders");
@@ -141,9 +138,14 @@ namespace StudySmortAPI.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("ParentId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerId");
+
+                    b.HasIndex("ParentId");
 
                     b.ToTable("Notebooks");
                 });
@@ -174,6 +176,9 @@ namespace StudySmortAPI.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("FolderId")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -221,37 +226,42 @@ namespace StudySmortAPI.Migrations
 
             modelBuilder.Entity("StudySmortAPI.Model.Folder", b =>
                 {
-                    b.HasOne("StudySmortAPI.Model.User", "Owner")
-                        .WithOne("RootDir")
-                        .HasForeignKey("StudySmortAPI.Model.Folder", "OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("StudySmortAPI.Model.Folder", "ParentFolder")
                         .WithMany("ChildFolders")
                         .HasForeignKey("ParentFolderId")
                         .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Owner");
 
                     b.Navigation("ParentFolder");
                 });
 
             modelBuilder.Entity("StudySmortAPI.Model.Notebook", b =>
                 {
-                    b.HasOne("StudySmortAPI.Model.Folder", null)
-                        .WithMany("ChildNotebooks")
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("StudySmortAPI.Model.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("StudySmortAPI.Model.Folder", "Parent")
+                        .WithMany("ChildNotebooks")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Owner");
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("StudySmortAPI.Model.User", b =>
+                {
+                    b.HasOne("StudySmortAPI.Model.Folder", "RootDir")
+                        .WithOne()
+                        .HasForeignKey("StudySmortAPI.Model.User", "FolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RootDir");
                 });
 
             modelBuilder.Entity("StudySmortAPI.Model.FlashcardCategory", b =>
@@ -271,9 +281,6 @@ namespace StudySmortAPI.Migrations
                     b.Navigation("Deadlines");
 
                     b.Navigation("FlashcardCategories");
-
-                    b.Navigation("RootDir")
-                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

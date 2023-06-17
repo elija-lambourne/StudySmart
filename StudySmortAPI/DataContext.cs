@@ -45,11 +45,10 @@ public class DataContext : DbContext
                 .WithOne(d => d.Owner)
                 .HasForeignKey(d => d.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
-
+                
             entity.HasOne(u => u.RootDir)
-                .WithOne(f => f.Owner)
-                .HasForeignKey<User>(x => x.FolderId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .WithOne()
+                .HasForeignKey<User>(u => u.FolderId);
             
             // Additional configurations for User entity...
             entity.Property(u => u.Email).IsRequired();
@@ -61,11 +60,16 @@ public class DataContext : DbContext
             entity.HasKey(n => n.Id);
 
             // Define relationships
-            entity.HasOne(n => n.Owner)
+            entity
+                .HasOne(n => n.Owner)
                 .WithMany()
                 .HasForeignKey(n => n.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
-
+            entity
+                .HasOne(n => n.Parent)
+                .WithMany(f => f.ChildNotebooks)
+                .HasForeignKey(n => n.ParentId)
+                .OnDelete(DeleteBehavior.Cascade);
             // Additional configurations for Notebook entity...
         });
 
@@ -73,20 +77,17 @@ public class DataContext : DbContext
         {
             entity.HasKey(f => f.FolderId);
             // Define relationships
-            entity.HasOne(f => f.Owner)
-                .WithOne(u => u.RootDir)
-                .HasForeignKey<Folder>(x => x.OwnerId)
-                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasMany(f => f.ChildNotebooks)
-                .WithOne()
-                .HasForeignKey(n => n.OwnerId)
+                .WithOne(x => x.Parent)
+                .HasForeignKey(n => n.ParentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(f => f.ChildFolders)
                 .WithOne(cf => cf.ParentFolder)
                 .HasForeignKey(cf => cf.ParentFolderId)
                 .OnDelete(DeleteBehavior.Cascade);
-
+        
             // Additional configurations for Folder entity...
         });
 

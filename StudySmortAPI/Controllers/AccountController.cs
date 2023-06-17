@@ -9,7 +9,7 @@ using StudySmortAPI.Model;
 namespace StudySmortAPI.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("[controller]")]
 public partial class AccountController : ControllerBase
 {
     private readonly DataContext _dbContext;
@@ -38,16 +38,17 @@ public partial class AccountController : ControllerBase
             Image = model.Image
         };
 
-        newUser.RootDir = new Folder()
+        var rootDir = new Folder()
         {
             ChildFolders = new List<Folder>(),
             ChildNotebooks = new List<Notebook>(),
             FolderId = Guid.NewGuid(),
             FolderName = "~",
-            Owner = newUser,
             OwnerId = newUser.Id
         };
+        newUser.RootDir = rootDir;
 
+        _dbContext.Folders.Add(rootDir);
         _dbContext.Users.Add(newUser);
         _dbContext.SaveChanges();
 
@@ -84,8 +85,8 @@ public partial class AccountController : ControllerBase
                 new(JwtRegisteredClaimNames.NameId, id.ToString())
             }),
             Expires = DateTime.UtcNow.Add(_tokenLifetime),
-            Issuer = "http://localhost:5162",
-            Audience = "http://localhost:5162",
+            Issuer = "http://75.119.133.95:5000",
+            Audience = "http://75.119.133.95:5000",
             SigningCredentials = new SigningCredentials
             (
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TokenSecret)),

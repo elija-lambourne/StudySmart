@@ -1,7 +1,6 @@
-using System.Collections;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using StudySmortAPI.Model;
 
 namespace StudySmortAPI.Controllers;
@@ -11,220 +10,165 @@ namespace StudySmortAPI.Controllers;
 [Authorize]
 public class FolderController : ControllerBase
 {
-    private readonly DataContext _dbContext;
+    private readonly DataContext _context;
 
-    public FolderController(DataContext dbContext,ILogger<FolderController> logger)
+    public FolderController(DataContext context)
     {
-        _dbContext = dbContext;
+        _context = context;
     }
-    
-    [HttpPost("{parentId:guid}")]
-    public IActionResult AddChildFolder(Guid parentId, [FromBody] FolderData childFolder)
+
+    // GET api/folder/rootdir
+    [HttpGet("rootdir")]
+    public async Task<ActionResult<FolderData>> GetRootDir()
     {
-        if (childFolder == null)
-        {
-            return BadRequest("Invalid folder data");
-        }
         var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
-            return BadRequest();
+            return BadRequest("Could not read GUID from context");
         }
 
-        var user = _dbContext.Users.FirstOrDefault(u => u.Id == userId);
+        if (!_context.Users.Any(x => x.Id == userId))
+        {
+            return BadRequest("Jwt still valid, but user has been removed");
+        }
+
+        var rootDir = await _context.Folders
+            .Include(f => f.ChildFolders)
+            .Include(f => f.ChildNotebooks)
+            .FirstOrDefaultAsync(f => f.ParentFolderId == null && f.OwnerId == userId);
+
+        if (rootDir == null)
+        {
+            return StatusCode(500);
+        }
+
+        var folderData = MapFolderToFolderData(rootDir);
+
+        return Ok(folderData);
+    }
+
+    // POST api/folder/{parentId}/childfolder
+    [HttpPost("{parentId:guid}/childfolder")]
+    public async Task<ActionResult<FolderData>> AddChildFolder(Guid parentId, FolderData folderData)
+    {
+        var userId = AccountController.GetGuidFromToken(HttpContext);
+        if (userId == null)
+        {
+            return BadRequest("Could not read GUID from context");
+        }
+
+        var user = await _context.Users.FindAsync(userId);
         if (user == null)
         {
-            return Unauthorized("User has been deleted but JWT is still valid");
-        }
-        var parentFolder = _dbContext.Folders.FirstOrDefault(f => f.FolderId == parentId);
-        if (parentFolder == null)
-        {
-            return NotFound("Parent folder not found");
+            return BadRequest("Jwt still valid but user has been deleted.");
         }
 
-        var folder = new Folder()
+        var parentFolder = await _context.Folders.FindAsync(parentId);
+
+        if (parentFolder == null)
         {
+            return NotFound();
+        }
+
+        var childFolder = new Folder
+        {
+            FolderName = folderData.Name,
+            ParentFolderId = parentId,
+            FolderId = Guid.NewGuid(),
             ChildFolders = new List<Folder>(),
             ChildNotebooks = new List<Notebook>(),
-            FolderId = Guid.NewGuid(),
-            FolderName = childFolder.Name,
-            Owner = user,
-            OwnerId = (Guid)userId,
-            ParentFolder = parentFolder,
-            ParentFolderId = parentFolder.FolderId
+            ParentFolder = parentFolder
         };
-        _dbContext.Folders.FirstOrDefault(f => f.FolderId == parentId)!.ChildFolders.Add(folder);
-        _dbContext.SaveChanges();
+
+        _context.Folders.Add(childFolder);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(AddChildFolder), new { id = childFolder.FolderId },
+            new FolderData(childFolder.FolderId.ToString(), childFolder.FolderName,
+                childFolder.ParentFolderId.ToString(), childFolder.ParentFolder.FolderName, new List<FolderData>(),
+                new List<NotebookData>()));
+    }
+
+    // PUT api/folder/{id}/name
+    [HttpPut("{id:guid}/{name}")]
+    public async Task<IActionResult> UpdateFolderName(Guid id, string name)
+    {
+        var folder = await _context.Folders.FindAsync(id);
+
+        if (folder == null)
+        {
+            return NotFound();
+        }
+
+        folder.FolderName = name;
+
+        await _context.SaveChangesAsync();
 
         return Ok();
     }
 
-    [HttpPost("Notebook/{parentId:guid}")]
-    public IActionResult AddNotebookToFolder(Guid parentId, [FromBody] NotebookData notebook)
+    // DELETE api/folder/{id}
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteFolder(Guid id)
     {
-        if (notebook == null)
-        {
-            return BadRequest("Invalid notebook data");
-        }
-
         var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
-            return BadRequest("Invalid user id");
+            return BadRequest("Could not read GUID from context");
         }
-        var parentFolder = _dbContext.Folders.FirstOrDefault(f => f.FolderId == parentId && f.OwnerId == userId);
-        if (parentFolder == null)
-        {
-            return NotFound("Parent folder not found");
-        }
-        
-        var user = _dbContext.Users.FirstOrDefault(u => u.Id == userId);
+
+        var user = await _context.Users.FindAsync(userId);
         if (user == null)
         {
-            return Unauthorized("User has been deleted but JWT is still valid");
-        }
-        
-        parentFolder.ChildNotebooks.Add(new Notebook()
-        {
-            Id = Guid.NewGuid(),
-            Owner = user,
-            OwnerId = (Guid)userId,
-            Pages = notebook.Pages.ToList()
-        });
-        _dbContext.SaveChanges();
-
-        return Ok(notebook);
-    }
-    
-    [HttpPut("Notebook/Pages/{notebookId:guid}")]
-    public IActionResult UpdateNotebookPages(Guid notebookId, [FromBody] ICollection<string> newPages)
-    {        
-        var userId = AccountController.GetGuidFromToken(HttpContext);
-        if (userId == null)
-        {
-            return BadRequest();
-        }
-        var notebook = _dbContext.Notebooks.FirstOrDefault(n => n.Id == notebookId && n.OwnerId == userId);
-        if (notebook == null)
-        {
-            return NotFound("Notebook not found or unautorized");
+            return BadRequest("Jwt still valid but user has been deleted.");
         }
 
-        notebook.UpdatePages(newPages);
-        _dbContext.SaveChanges();
+        var folder = await _context.Folders.FindAsync(id);
 
-        return Ok(notebook);
-    }
-
-    [HttpPut("{name}+{id:guid}")]
-    public IActionResult RenameFolder(string name,Guid id)
-    {
-        var userId = AccountController.GetGuidFromToken(HttpContext);
-        if (userId == null)
-        {
-            return BadRequest("Invalid user id");
-        }
-
-        var firstOrDefault = _dbContext.Folders.FirstOrDefault(x => x.FolderId == id && x.OwnerId == userId);
-        if (firstOrDefault == null)
+        if (folder == null)
         {
             return NotFound();
         }
         
-        firstOrDefault.Update(name);
-        _dbContext.SaveChanges();
-        return Ok();
-    }
-
-    [HttpDelete("{id:guid}")]
-    public IActionResult DeleteFolder(Guid id)
-    {
-        var userId = AccountController.GetGuidFromToken(HttpContext);
-        if (userId == null)
+        if (_context.Folders.FirstOrDefault(f => f.ParentFolderId == null && f.OwnerId == userId)?.FolderId == folder.FolderId)
         {
-            return BadRequest("Invalid user id");
+            return Unauthorized("The root dir may not be deleted!");
         }
 
-        var ent = _dbContext.Folders.FirstOrDefault(x => x.FolderId == id && x.OwnerId == userId);
-        if (ent == null)
-        {
-            return NotFound();
-        }
-
-        _dbContext.Folders.Remove(ent);
-        _dbContext.SaveChanges();
+        _context.Folders.Remove(folder);
+        await _context.SaveChangesAsync();
 
         return Ok();
     }
 
-    [HttpDelete("notebook/{id:guid}")]
-    public IActionResult DeleteNotebook(Guid id)
+    private static FolderData MapFolderToFolderData(Folder folder)
     {
-        var userId = AccountController.GetGuidFromToken(HttpContext);
-        if (userId == null)
-        {
-            return BadRequest("Invalid user id");
-        }
+        var childFoldersData = folder.ChildFolders?.Select(cf => MapFolderToFolderData(cf)).ToList();
+        var childNotebooksData = folder.ChildNotebooks?.Select(cn => MapNotebookToNotebookData(cn)).ToList();
 
-        var ent = _dbContext.Notebooks.FirstOrDefault(x => x.Id == id && x.OwnerId == userId);
-        if (ent == null)
-        {
-            return NotFound();
-        }
-
-        _dbContext.Notebooks.Remove(ent);
-        _dbContext.SaveChanges();
-        return Ok();
-    }
-    
-    
-    [HttpGet]
-    public IActionResult GetAllFolders()
-    {
-        var userId = AccountController.GetGuidFromToken(HttpContext);
-        if (userId == null)
-        {
-            return BadRequest("Invalid user id");
-        }
-
-        var root = _dbContext.Users.FirstOrDefault(x => x.Id == userId)?.RootDir;
-        if (root == null)
-        {
-            return BadRequest("User delete, but JWT still valid");
-        }
-
-        return Ok(ConvertFolderToFolderData(root));
-    }
-    private static FolderData ConvertFolderToFolderData(Folder folder)
-    {
-        // Recursively convert child folders
-        var childFolders = folder.ChildFolders?.Select(ConvertFolderToFolderData)?.ToList();
-
-        // Convert child notebooks to a desired format (assuming you have a similar conversion method)
-        var childNotebooks = folder.ChildNotebooks?.Select(ConvertNotebookToNotebookData)?.ToList();
-
-        // Create the FolderData object using the provided properties
-        var folderData = new FolderData(
+        var folderData = new FolderData
+        (
             folder.FolderId.ToString(),
             folder.FolderName,
-            folder.ParentFolderId,
-            folder.ParentFolder?.FolderName ?? "-",
-            childFolders ?? new List<FolderData>(),
-            childNotebooks ?? new List<NotebookData>()
+            folder.ParentFolderId?.ToString(),
+            folder.ParentFolder?.FolderName,
+            childFoldersData ?? new List<FolderData>(),
+            childNotebooksData ?? new List<NotebookData>()
         );
 
         return folderData;
     }
 
-    private static NotebookData ConvertNotebookToNotebookData(Notebook notebook)
+
+    private static NotebookData MapNotebookToNotebookData(Notebook notebook)
     {
-        var notebookData = new NotebookData(
+        var notebookData = new NotebookData
+        (
             notebook.Id.ToString(),
-            notebook.Pages,
-            notebook.OwnerId.ToString()
+            notebook.Pages.ToList(),
+            notebook.ParentId.ToString()
         );
 
         return notebookData;
     }
-
 }
