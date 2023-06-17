@@ -8,8 +8,8 @@ public sealed class Folder
     public string FolderName { get; set; }
     public ICollection<Folder> ChildFolders { get; set; }
     public ICollection<Notebook> ChildNotebooks { get; set; }
-    public Folder ParentFolder { get; set; }
-    public Guid ParentFolderId { get; set; }
+    public Folder? ParentFolder { get; set; }
+    public Guid? ParentFolderId { get; set; }
 
     public void Update(string name)
     {

@@ -115,7 +115,7 @@ namespace StudySmortAPI.Migrations
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("ParentFolderId")
+                    b.Property<Guid?>("ParentFolderId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("FolderId");
@@ -230,8 +230,7 @@ namespace StudySmortAPI.Migrations
                     b.HasOne("StudySmortAPI.Model.Folder", "ParentFolder")
                         .WithMany("ChildFolders")
                         .HasForeignKey("ParentFolderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Owner");
 

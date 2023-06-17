@@ -38,6 +38,16 @@ public partial class AccountController : ControllerBase
             Image = model.Image
         };
 
+        newUser.RootDir = new Folder()
+        {
+            ChildFolders = new List<Folder>(),
+            ChildNotebooks = new List<Notebook>(),
+            FolderId = Guid.NewGuid(),
+            FolderName = "~",
+            Owner = newUser,
+            OwnerId = newUser.Id
+        };
+
         _dbContext.Users.Add(newUser);
         _dbContext.SaveChanges();
 

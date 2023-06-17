@@ -4,7 +4,7 @@ namespace StudySmortAPI.Model;
 
 public record struct UserData(string Id, string Token);
 public record NotebookData(string Id,ICollection<string> Pages, string ParentId);
-public record FolderData(string Id,string Name, Guid ParentId, string ParentName, ICollection<FolderData> ChildFolders, ICollection<NotebookData> ChildNotebooks);
+public record FolderData(string Id,string Name, Guid? ParentId, string? ParentName, ICollection<FolderData> ChildFolders, ICollection<NotebookData> ChildNotebooks);
 
 public record struct DeadlineData(string Id, DateTime DateTimeUtc ,string Note, string Title);
 
