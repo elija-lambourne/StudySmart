@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using StudySmortAPI.Model;
 
 namespace StudySmortAPI.Controllers;
@@ -24,7 +25,7 @@ public class FlashcardController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public IActionResult DeleteCategory(Guid id)
     {
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest();
@@ -48,7 +49,7 @@ public class FlashcardController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public IActionResult DeleteFlashcard(Guid id)
     {
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest();
@@ -70,7 +71,7 @@ public class FlashcardController : ControllerBase
     [Description("Creates a new flashcard category based on the passed json data")]
     public IActionResult CreateCategory([FromBody] FlashcardCategoryData categoryData)
     {
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest();
@@ -93,20 +94,20 @@ public class FlashcardController : ControllerBase
         });
         _dbContext.SaveChanges();
 
-        categoryData.Id = id;
+        categoryData.Id = id.ToString();
         return Ok(categoryData);
     }
 
     [HttpPut("category")]
     public IActionResult UpdateCategory([FromBody] FlashcardCategoryData data)
     {
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest();
         }
 
-        var firstOrDefault = _dbContext.FlashcardCategories.FirstOrDefault(x => x.Id == data.Id && x.OwnerId == userId);
+        var firstOrDefault = _dbContext.FlashcardCategories.FirstOrDefault(x => x.Id == new Guid(data.Id) && x.OwnerId == userId);
         if (firstOrDefault == null)
         {
             return NotFound();
@@ -124,13 +125,17 @@ public class FlashcardController : ControllerBase
     [Description("Gets all the flashcards which belong to the specified category (passed id)")]
     public IActionResult GetByCategory(Guid id)
     {
-        var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest("User ID not found");
         }
         
-        var flashcards = _dbContext.Flashcards.Where(f => f.OwnerId == new Guid(userId) && f.CategoryId == id).ToList();
+        var flashcards = _dbContext.Flashcards
+            .Include(f => f.Category)
+            .Where(f => f.OwnerId == userId && f.CategoryId == id)
+            .ToList();
+
         if (flashcards.Count == 0)
         {
             return NoContent();
@@ -139,8 +144,8 @@ public class FlashcardController : ControllerBase
         var flashcardData = new List<FlashCardData>();
         foreach (var flashcard in flashcards)
         {
-            flashcardData.Add(new FlashCardData(flashcard.Id,flashcard.Word,flashcard.Translation,flashcard.CorrectCnt,
-                flashcard.WrongCnt,flashcard.SkipCnt,flashcard.CategoryId,flashcard.Category.Name));
+            flashcardData.Add(new FlashCardData(flashcard.Id.ToString(),flashcard.Word,flashcard.Translation,flashcard.CorrectCnt,
+                flashcard.WrongCnt,flashcard.SkipCnt,flashcard.CategoryId.ToString(),flashcard.Category.Name));
         }
         
         return Ok(flashcardData);
@@ -153,19 +158,19 @@ public class FlashcardController : ControllerBase
     [Description("Gets the category data (name + id) of all the categories")]
     public IActionResult GetCategories()
     {
-        var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest("User ID not found");
         }
         
-        var flashcardCategories = _dbContext.FlashcardCategories.Where(f => f.OwnerId.ToString() == userId).ToList();
+        var flashcardCategories = _dbContext.FlashcardCategories.Where(f => f.OwnerId == userId).ToList();
         if (flashcardCategories.Count == 0)
         {
             return NoContent();
         }
 
-        var actualColl = flashcardCategories.Select(flashcardCategory => new FlashcardCategoryData(flashcardCategory.Id, flashcardCategory.Name)).ToList();
+        var actualColl = flashcardCategories.Select(flashcardCategory => new FlashcardCategoryData(flashcardCategory.Id.ToString(), flashcardCategory.Name)).ToList();
 
         return Ok(actualColl);
     }
@@ -183,7 +188,7 @@ public class FlashcardController : ControllerBase
             return BadRequest();
         }
 
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest("User ID not found");
@@ -212,7 +217,7 @@ public class FlashcardController : ControllerBase
         _dbContext.FlashcardCategories.FirstOrDefault(x => x.Id == id)!.Flashcards.Add(flashcard2);
         _dbContext.SaveChanges();
         
-        return Ok(flashcard with { Id = flashcardId, CategoryId = category.Id, CategoryName = category.Name });
+        return Ok(flashcard with { Id = flashcardId.ToString(), CategoryId = category.Id.ToString(), CategoryName = category.Name });
     }
     
     [HttpPut]
@@ -226,28 +231,15 @@ public class FlashcardController : ControllerBase
             return BadRequest();
         }
 
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest("User ID not found");
         }
 
-        _dbContext.Flashcards.FirstOrDefault(x => x.Id == flashcard.Id && x.OwnerId == userId)?.UpdateData(flashcard);
+        _dbContext.Flashcards.FirstOrDefault(x => x.Id == new Guid(flashcard.Id) && x.OwnerId == userId)?.UpdateData(flashcard);
         _dbContext.SaveChanges();
         
         return Ok();
-    }
-    
-    
-
-    private Guid? GetUserIdFromContext()
-    {
-        var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
-        if (userId == null)
-        {
-            return null;
-        }
-        
-        return new Guid(userId);
     }
 }

@@ -161,7 +161,15 @@ namespace StudySmortAPI.Migrations
                     b.Property<Guid>("FolderId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Image")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -186,7 +194,7 @@ namespace StudySmortAPI.Migrations
                     b.HasOne("StudySmortAPI.Model.FlashcardCategory", "Category")
                         .WithMany("Flashcards")
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("StudySmortAPI.Model.User", "Owner")

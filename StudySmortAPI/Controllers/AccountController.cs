@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using StudySmortAPI.Model;
@@ -9,14 +10,13 @@ namespace StudySmortAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AccountController : ControllerBase
+public partial class AccountController : ControllerBase
 {
     private readonly DataContext _dbContext;
-    private readonly ILogger<AccountController> _logger;
+    private const string TokenSecret = "sjkhwlakejh2kljh23kjh4kjndsakjfkjh43kjh";
     public AccountController(DataContext dbContext, ILogger<AccountController> logger)
     {
         _dbContext = dbContext;
-        _logger = logger;
     }
 
     [HttpPost("register")]
@@ -24,40 +24,26 @@ public class AccountController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult Register(UserRegistrationModel model)
     {        
-        _logger.LogInformation("POST Account/register");
-        if (_dbContext.Users.Any(u => u.Email == model.Email))
+        if (!MyRegex().IsMatch(model.Email) || _dbContext.Users.Any(u => u.Email == model.Email))
         {
             return BadRequest("User already exists.");
         }
-
-        // Create a new user
+        
         var newUser = new User
         {
             Id = Guid.NewGuid(),
             Email = model.Email,
-            Password = model.Password
+            Password = model.Password,
+            Username = model.Username,
+            Image = model.Image
         };
 
         _dbContext.Users.Add(newUser);
         _dbContext.SaveChanges();
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(RandomKeyGenerator.Generate256BitKeyString()));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, newUser.Id.ToString()),
-        };
-        var token = new JwtSecurityToken(
-            issuer: "htl-leonding",
-            audience: "htl-leonding-aud",
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1), // Token expiration time
-            signingCredentials: credentials
-        );
+        var tokenString = GenerateToken(new UserLoginModel(model.Email, model.Password), newUser.Id);
 
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-        return Ok(new UserData(newUser.Id,tokenString));
+        return Ok(new UserData(newUser.Id.ToString(),tokenString));
     }
     
     [HttpPost("login")]
@@ -72,25 +58,45 @@ public class AccountController : ControllerBase
             return Unauthorized("Invalid email or password.");
         }
 
-        // Create claims for the user
-        var claims = new[]
+        var tokenString = GenerateToken(model, user.Id);
+
+        return Ok(new UserData(user.Id.ToString(),tokenString));
+    }
+    
+    private string GenerateToken(UserLoginModel loginUser,Guid id)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+
+        var tokenDescriptor = new SecurityTokenDescriptor()
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            Subject = new ClaimsIdentity(new Claim[]
+            {
+                new(JwtRegisteredClaimNames.NameId, id.ToString())
+            }),
+            Expires = DateTime.UtcNow.Add(_tokenLifetime),
+            Issuer = "http://localhost:5162",
+            Audience = "http://localhost:5162",
+            SigningCredentials = new SigningCredentials
+            (
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TokenSecret)),
+                SecurityAlgorithms.HmacSha256Signature
+            )
         };
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
+    }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(RandomKeyGenerator.Generate256BitKeyString()));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+    private readonly TimeSpan _tokenLifetime = new(0, 1, 0, 0);
 
-        var token = new JwtSecurityToken(
-            issuer: "htl-leonding",
-            audience: "htl-leonding-aud",
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1), // Token expiration time
-            signingCredentials: credentials
-        );
-
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-        return Ok(new UserData(user.Id,tokenString));
+    [GeneratedRegex(@"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")]
+    private static partial Regex MyRegex();
+    
+    public static Guid? GetGuidFromToken(HttpContext httpContext)
+    {
+        var identity = httpContext.User.Identity as ClaimsIdentity;
+        var claim = identity?.Claims.ToList().Find(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        
+        if(claim == null) return null;
+        return new Guid(claim.Value);
     }
 }

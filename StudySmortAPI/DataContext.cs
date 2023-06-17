@@ -30,6 +30,7 @@ public class DataContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(u => u.Id);
@@ -124,7 +125,7 @@ public class DataContext : DbContext
             .HasOne(f => f.Category)
             .WithMany(c => c.Flashcards)
             .HasForeignKey(f => f.CategoryId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         
         base.OnModelCreating(modelBuilder);

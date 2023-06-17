@@ -13,22 +13,19 @@ public class FolderController : ControllerBase
 {
     private readonly DataContext _dbContext;
 
-    private readonly ILogger<FolderController> _logger;
     public FolderController(DataContext dbContext,ILogger<FolderController> logger)
     {
         _dbContext = dbContext;
-        _logger = logger;
     }
     
     [HttpPost("{parentId:guid}")]
     public IActionResult AddChildFolder(Guid parentId, [FromBody] FolderData childFolder)
     {
-        _logger.LogInformation("POST Folder/{{parentId:guid}}");
         if (childFolder == null)
         {
             return BadRequest("Invalid folder data");
         }
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest();
@@ -70,7 +67,7 @@ public class FolderController : ControllerBase
             return BadRequest("Invalid notebook data");
         }
 
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest("Invalid user id");
@@ -101,11 +98,16 @@ public class FolderController : ControllerBase
     
     [HttpPut("Notebook/Pages/{notebookId:guid}")]
     public IActionResult UpdateNotebookPages(Guid notebookId, [FromBody] ICollection<string> newPages)
-    {
-        var notebook = _dbContext.Notebooks.FirstOrDefault(n => n.Id == notebookId);
+    {        
+        var userId = AccountController.GetGuidFromToken(HttpContext);
+        if (userId == null)
+        {
+            return BadRequest();
+        }
+        var notebook = _dbContext.Notebooks.FirstOrDefault(n => n.Id == notebookId && n.OwnerId == userId);
         if (notebook == null)
         {
-            return NotFound("Notebook not found");
+            return NotFound("Notebook not found or unautorized");
         }
 
         notebook.UpdatePages(newPages);
@@ -117,7 +119,7 @@ public class FolderController : ControllerBase
     [HttpPut("{name}+{id:guid}")]
     public IActionResult RenameFolder(string name,Guid id)
     {
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest("Invalid user id");
@@ -137,7 +139,7 @@ public class FolderController : ControllerBase
     [HttpDelete("{id:guid}")]
     public IActionResult DeleteFolder(Guid id)
     {
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest("Invalid user id");
@@ -158,7 +160,7 @@ public class FolderController : ControllerBase
     [HttpDelete("notebook/{id:guid}")]
     public IActionResult DeleteNotebook(Guid id)
     {
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest("Invalid user id");
@@ -179,7 +181,7 @@ public class FolderController : ControllerBase
     [HttpGet]
     public IActionResult GetAllFolders()
     {
-        var userId = GetUserIdFromContext();
+        var userId = AccountController.GetGuidFromToken(HttpContext);
         if (userId == null)
         {
             return BadRequest("Invalid user id");
@@ -193,17 +195,6 @@ public class FolderController : ControllerBase
 
         return Ok(ConvertFolderToFolderData(root));
     }
-    private Guid? GetUserIdFromContext()
-    {
-        var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
-        if (userId == null)
-        {
-            return null;
-        }
-        
-        return new Guid(userId);
-    }
-    
     private static FolderData ConvertFolderToFolderData(Folder folder)
     {
         // Recursively convert child folders
@@ -214,7 +205,7 @@ public class FolderController : ControllerBase
 
         // Create the FolderData object using the provided properties
         var folderData = new FolderData(
-            folder.FolderId,
+            folder.FolderId.ToString(),
             folder.FolderName,
             folder.ParentFolderId,
             folder.ParentFolder?.FolderName ?? "-",
@@ -228,9 +219,9 @@ public class FolderController : ControllerBase
     private static NotebookData ConvertNotebookToNotebookData(Notebook notebook)
     {
         var notebookData = new NotebookData(
-            notebook.Id,
+            notebook.Id.ToString(),
             notebook.Pages,
-            notebook.OwnerId
+            notebook.OwnerId.ToString()
         );
 
         return notebookData;
