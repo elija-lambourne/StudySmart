@@ -35,7 +35,7 @@ public class DeadlineController : ControllerBase
             return NoContent();
         }
 
-        var deadlineData = deadlines.Select(deadline => new DeadlineData(deadline.DeadlineId.ToString(), deadline.DateTimeUtc, deadline.Note, deadline.Title)).ToList();
+        var deadlineData = deadlines.Select(deadline => new DeadlineData(deadline.DeadlineId.ToString(), deadline.DateTimeUtc.ToUniversalTime(), deadline.Note, deadline.Title)).ToList();
         return Ok(deadlineData);
     }
     
@@ -60,7 +60,7 @@ public class DeadlineController : ControllerBase
             DeadlineId = Guid.NewGuid(),
             Note = deadline.Note,
             Title = deadline.Title,
-            DateTimeUtc = deadline.DateTimeUtc,
+            DateTimeUtc = deadline.DateTimeUtc.ToUniversalTime(),
             OwnerId = (Guid)userId,
             Owner = _dbContext.Users.FirstOrDefault(x => x.Id == userId)! //! Tf?!
         };
