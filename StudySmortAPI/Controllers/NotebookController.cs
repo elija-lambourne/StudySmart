@@ -66,6 +66,7 @@ public class NotebookController : ControllerBase
         }
 
         notebook.Pages = notebookData.Pages;
+        notebook.Name = notebookData.Name;
 
         await _context.SaveChangesAsync();
 
