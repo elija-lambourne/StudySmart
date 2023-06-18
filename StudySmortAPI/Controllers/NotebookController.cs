@@ -39,6 +39,7 @@ public class NotebookController : ControllerBase
 
         var childNotebook = new Notebook
         {
+            Name = notebookData.Name,
             Pages = notebookData.Pages,
             ParentId = parentId,
             Id = Guid.NewGuid(),
@@ -50,7 +51,7 @@ public class NotebookController : ControllerBase
         _context.Notebooks.Add(childNotebook);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(AddChildNotebook), new { id = childNotebook.Id }, new NotebookData(childNotebook.Id.ToString(),childNotebook.Pages,childNotebook.ParentId.ToString()));
+        return CreatedAtAction(nameof(AddChildNotebook), new { id = childNotebook.Id }, new NotebookData(childNotebook.Id.ToString(),childNotebook.Pages,childNotebook.Name,childNotebook.ParentId.ToString()));
     }
 
     // PUT api/notebook/{id}

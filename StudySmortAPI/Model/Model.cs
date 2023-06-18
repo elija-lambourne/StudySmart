@@ -3,7 +3,7 @@ using System.Collections;
 namespace StudySmortAPI.Model;
 
 public record struct UserData(string Id, string Token);
-public record NotebookData(string Id,ICollection<string> Pages, string ParentId);
+public record NotebookData(string Id,ICollection<string> Pages, string Name, string ParentId);
 public record FolderData(string Id,string Name, string? ParentId, string? ParentName, ICollection<FolderData> ChildFolders, ICollection<NotebookData> ChildNotebooks);
 
 public record struct DeadlineData(string Id, DateTime DateTimeUtc ,string Note, string Title);

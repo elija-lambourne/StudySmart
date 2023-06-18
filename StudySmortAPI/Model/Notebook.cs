@@ -7,5 +7,6 @@ public sealed class Notebook
     public Guid Id { get; set; }
     public User Owner { get; set; }
     public Guid OwnerId { get; set; }
+    public string Name { get; set; }
     public ICollection<string> Pages { get; set; }
 }

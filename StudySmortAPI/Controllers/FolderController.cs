@@ -166,6 +166,7 @@ public class FolderController : ControllerBase
         (
             notebook.Id.ToString(),
             notebook.Pages.ToList(),
+            notebook.Name,
             notebook.ParentId.ToString()
         );
 
