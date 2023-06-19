@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using StudySmortAPI.Model;
@@ -17,6 +18,25 @@ public partial class AccountController : ControllerBase
     public AccountController(DataContext dbContext, ILogger<AccountController> logger)
     {
         _dbContext = dbContext;
+    }
+
+    [HttpGet]
+    [Authorize]
+    public IActionResult GetUserData()
+    {
+        var userId = GetGuidFromToken(HttpContext);
+        if (userId == null)
+        {
+            return BadRequest();
+        }
+
+        var user = _dbContext.Users.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+        {
+            return Unauthorized("User has been deleted but JWT is still valid");
+        }
+
+        return Ok(new UserData(userId.ToString(), user.Username, user.Email, string.Empty, user.Image));
     }
 
     [HttpPost("register")]
@@ -54,7 +74,7 @@ public partial class AccountController : ControllerBase
 
         var tokenString = GenerateToken(new UserLoginModel(model.Email, model.Password), newUser.Id);
 
-        return Ok(new UserData(newUser.Id.ToString(),tokenString));
+        return Ok(new UserData(newUser.Id.ToString(),string.Empty,string.Empty, tokenString, string.Empty));
     }
     
     [HttpPost("login")]
@@ -71,7 +91,7 @@ public partial class AccountController : ControllerBase
 
         var tokenString = GenerateToken(model, user.Id);
 
-        return Ok(new UserData(user.Id.ToString(),tokenString));
+        return Ok(new UserData(user.Id.ToString(),string.Empty, string.Empty, tokenString, string.Empty));
     }
     
     private string GenerateToken(UserLoginModel loginUser,Guid id)

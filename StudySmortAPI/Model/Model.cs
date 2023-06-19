@@ -2,7 +2,7 @@ using System.Collections;
 
 namespace StudySmortAPI.Model;
 
-public record struct UserData(string Id, string Token);
+public record struct UserData(string Id,string Username,string Email, string Token, string Pfp);
 public record NotebookData(string Id,ICollection<string> Pages, string Name, string ParentId);
 public record FolderData(string Id,string Name, string? ParentId, string? ParentName, ICollection<FolderData> ChildFolders, ICollection<NotebookData> ChildNotebooks);
 

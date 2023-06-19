@@ -82,8 +82,8 @@ public class DeadlineController : ControllerBase
             return BadRequest("User ID not found");
         }
 
-        var deadlineToBeRemoved = _dbContext.Deadlines
-            .FirstOrDefault(d => d.DeadlineId == id);
+        Console.WriteLine(id.ToString());
+        var deadlineToBeRemoved = _dbContext.Deadlines.Find(id);
         if (deadlineToBeRemoved == null)
         {
             return NotFound("Deadline was not found!");
