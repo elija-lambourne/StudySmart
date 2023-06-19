@@ -101,12 +101,7 @@ public class FlashcardCategoryController : ControllerBase
             .Include(f => f.Category)
             .Where(f => f.OwnerId == userId && f.CategoryId == id)
             .ToList();
-
-        if (flashcards.Count == 0)
-        {
-            return NoContent();
-        }
-
+        
         var flashcardData = new List<FlashCardData>();
         foreach (var flashcard in flashcards)
         {
@@ -127,10 +122,6 @@ public class FlashcardCategoryController : ControllerBase
         }
         
         var flashcardCategories = _dbContext.FlashcardCategories.Where(f => f.OwnerId == userId).ToList();
-        if (flashcardCategories.Count == 0)
-        {
-            return NoContent();
-        }
 
         var actualColl = flashcardCategories.Select(flashcardCategory => new FlashcardCategoryData(flashcardCategory.Id.ToString(), flashcardCategory.Name)).ToList();
 

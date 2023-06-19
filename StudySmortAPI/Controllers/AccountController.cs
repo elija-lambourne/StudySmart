@@ -47,7 +47,7 @@ public partial class AccountController : ControllerBase
             OwnerId = newUser.Id
         };
         newUser.RootDir = rootDir;
-
+    
         _dbContext.Folders.Add(rootDir);
         _dbContext.Users.Add(newUser);
         _dbContext.SaveChanges();
