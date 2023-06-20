@@ -17,7 +17,6 @@ public class FolderController : ControllerBase
         _context = context;
     }
 
-    // GET api/folder/rootdir
     [HttpGet("rootdir")]
     public async Task<ActionResult<FolderData>> GetRootDir()
     {
@@ -33,7 +32,8 @@ public class FolderController : ControllerBase
         }
 
         var rootDir = await _context.Folders
-            .Include(f => f.ChildFolders)
+            .Include(f => f.ChildFolders) // Include child folders
+            .ThenInclude(cf => cf.ChildFolders) // Include child folders recursively
             .Include(f => f.ChildNotebooks)
             .FirstOrDefaultAsync(f => f.ParentFolderId == null && f.OwnerId == userId);
 
@@ -46,7 +46,6 @@ public class FolderController : ControllerBase
 
         return Ok(folderData);
     }
-
     // POST api/folder/{parentId}/childfolder
     [HttpPost("{parentId:guid}/childfolder")]
     public async Task<ActionResult<FolderData>> AddChildFolder(Guid parentId, FolderData folderData)
@@ -80,7 +79,6 @@ public class FolderController : ControllerBase
             ParentFolder = parentFolder
         };
 
-        parentFolder.ChildFolders.Add(childFolder);
         _context.Folders.Add(childFolder);
         await _context.SaveChangesAsync();
 

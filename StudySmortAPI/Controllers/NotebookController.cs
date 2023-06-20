@@ -47,7 +47,6 @@ public class NotebookController : ControllerBase
             Parent = parentFolder
         };
 
-        parentFolder.ChildNotebooks.Add(childNotebook);
         _context.Notebooks.Add(childNotebook);
         await _context.SaveChangesAsync();
 
