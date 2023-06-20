@@ -36,7 +36,6 @@ public class NotebookController : ControllerBase
         {
             return NotFound();
         }
-
         var childNotebook = new Notebook
         {
             Name = notebookData.Name,
@@ -48,6 +47,7 @@ public class NotebookController : ControllerBase
             Parent = parentFolder
         };
 
+        parentFolder.ChildNotebooks.Add(childNotebook);
         _context.Notebooks.Add(childNotebook);
         await _context.SaveChangesAsync();
 

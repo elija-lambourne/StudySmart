@@ -80,6 +80,7 @@ public class FolderController : ControllerBase
             ParentFolder = parentFolder
         };
 
+        parentFolder.ChildFolders.Add(childFolder);
         _context.Folders.Add(childFolder);
         await _context.SaveChangesAsync();
 

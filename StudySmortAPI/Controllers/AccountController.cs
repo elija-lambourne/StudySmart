@@ -20,6 +20,31 @@ public partial class AccountController : ControllerBase
         _dbContext = dbContext;
     }
 
+    [HttpPut]
+    [Authorize]
+    public IActionResult UpdateData(UserData data)
+    {
+        var userId = GetGuidFromToken(HttpContext);
+        if (userId == null)
+        {
+            return BadRequest();
+        }
+
+        var user = _dbContext.Users.FirstOrDefault(u => u.Id == userId);
+        if (user == null)
+        {
+            return Unauthorized("User has been deleted but JWT is still valid");
+        }
+
+        user.Image = data.Pfp;
+        user.Email = data.Email;
+        user.Username = data.Username;
+
+        _dbContext.SaveChangesAsync();
+        
+        return Ok();
+    }
+    
     [HttpGet]
     [Authorize]
     public IActionResult GetUserData()
